@@ -13,17 +13,21 @@
   .top h1{font-size:1.2rem;margin:0}
   .actions{display:flex;gap:8px;flex-wrap:wrap}
   .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid var(--ghost);background:#111;font-size:.8rem}
+
   .btn{border:1px solid var(--ghost);background:#121212;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer}
   .btn.primary{background:var(--brand);border-color:var(--brand)}
+
   .container{max-width:1100px;margin:16px auto;padding:0 16px 24px}
   .grid{display:grid;gap:14px}
   @media (min-width: 840px){ .grid{grid-template-columns:repeat(3,1fr)} }
   @media (min-width: 1200px){ .grid{grid-template-columns:repeat(4,1fr)} }
+
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
   .card.clickable{cursor:pointer;transition:transform .06s ease}
   .card.clickable:hover{transform:translateY(-2px)}
   .muted{color:var(--muted)}
   .caps{letter-spacing:.04em;text-transform:uppercase;font-size:.78rem;color:#a7a7a7}
+
   .list{display:grid;gap:12px}
   @media (min-width: 768px){ .list{grid-template-columns:repeat(2,1fr)} }
   .item-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:flex-start}
@@ -32,6 +36,7 @@
   .item-title{font-weight:700;margin-bottom:4px}
   .item-sub{font-size:.85rem;color:var(--muted)}
   .item-actions{display:flex;gap:8px;margin-top:8px}
+
   .detail{display:grid;gap:14px}
   @media (min-width: 900px){ .detail{grid-template-columns: 1.1fr 1fr} }
   .hero{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
@@ -59,7 +64,7 @@
 
 <script>
 /* ===== CONFIG ===== */
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzsTeik7_EV2DD1OV8BW8NSOYeeGLiOV6ub5mE19XYKreqtkMbzbUkEWqwqDzfGiGr_/exec';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxMAZS538fWhFYEWyPZEEaB4lAEdjEBOinf_UCLNVSOnEbMosuR4UeKIgMw2aVuAI48/exec';
 
 const SETORES = {
   bar: ['DRINKS','CACHAÇAS','COQUETÉIS','BEBIDAS','SUCOS','CAIPIRINHAS'],
@@ -82,13 +87,10 @@ const slugify = s => norm(s).replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
 const caps = s => String(s||'').toUpperCase();
 
 function normalizeFoto(url){
-  if(!url) return 'https://via.placeholder.com/300x200?text=Sem+Foto';
-  let id='';
-  let m=String(url).match(/\/file\/d\/([^/]+)\//);
-  if(m) id=m[1];
-  if(!id){ m=String(url).match(/[?&]id=([^&]+)/); if(m) id=m[1]; }
-  if(!id){ m=String(url).match(/uc\?id=([^&]+)/); if(m) id=m[1]; }
-  return id ? `https://drive.google.com/uc?id=${id}` : 'https://via.placeholder.com/300x200?text=Sem+Foto';
+  if(!url) return '';
+  // drive view -> uc
+  const m = String(url).match(/\/file\/d\/([^/]+)\//);
+  return m ? `https://drive.google.com/uc?id=${m[1]}` : url;
 }
 
 function buildId(r){
@@ -105,9 +107,10 @@ function parseReceita(val){
 }
 
 function mapRow(raw){
+  // normaliza chaves
   const obj = {};
   Object.entries(raw||{}).forEach(([k,v])=>{
-    const nk = norm(k).replace(/[^a-z0-9]/g,'');
+    const nk = norm(k).replace(/[^a-z0-9]/g,''); // ex.: "FOTO URL" -> "fotourl"
     obj[nk] = v;
   });
   return {
@@ -117,13 +120,12 @@ function mapRow(raw){
     rendimento: obj.qtdrendimento || obj.rendimento || raw.rendimento || '',
     unidadeRend: obj.umdorendimento || obj.unidaderend || raw.unidadeRend || '',
     receita: parseReceita(obj.receitajson || obj.receita || raw.receita),
-    fotoUrl: normalizeFoto(obj.fotourl || raw.fotoUrl || raw.foto || '') || 'https://via.placeholder.com/300x200?text=Sem+Foto',
+    fotoUrl: normalizeFoto(obj.fotourl || raw.fotoUrl || raw.foto || ''),
     custoReceita: Number(String(obj.custodareceita||'').toString().replace(',','.'))||0,
     custoPorGMl: Number(String(obj.custoporgramaml||'').toString().replace(',','.'))||0,
     custoPorKgL: Number(String(obj.custoporkgl||'').toString().replace(',','.'))||0,
     usuario: obj.usuario || raw.usuario || '',
-    data: obj.data || raw.data || '',
-    id: buildId(raw)
+    data: obj.data || raw.data || ''
   };
 }
 
@@ -132,9 +134,11 @@ async function fetchReceitas(){
   try{
     const r = await fetch(WEBAPP_URL+'?action=receitas&ts='+Date.now(),{cache:'no-store'});
     const j = await r.json();
-    const rows = (j && j.ok && Array.isArray(j.data)) ? j.data : [];
-RECEITAS = rows.map(mapRow);
-
+    const rows = Array.isArray(j) ? j : (j && j.ok ? (j.data||[]) : []);
+    RECEITAS = rows.map(mapRow).map(r=>{
+      const cls = (r.classificacao && r.classificacao.trim()) || r.empresa || 'SEM CLASSIFICAÇÃO';
+      return {...r, classificacao: cls, id: buildId({...r, classificacao:cls})};
+    });
     INDEX_BY_ID.clear(); RECEITAS.forEach(r=> INDEX_BY_ID.set(r.id,r));
     badgeTotal.textContent = `Receitas: ${RECEITAS.length}`;
   }catch(e){
@@ -165,6 +169,7 @@ function viewHome(){
     const clsList = SETORES[slug].map(c=>caps(c));
     const count = RECEITAS.filter(r=>{
       const base = caps((r.classificacao||r.empresa||'SEM CLASSIFICAÇÃO'));
+      // compara sem acento
       const baseN = caps(norm(base));
       return clsList.map(x=>caps(norm(x))).includes(baseN);
     }).length;
@@ -219,13 +224,14 @@ function viewSetor(slug){
     }
     subset.forEach(r=>{
       const card=document.createElement('div'); card.className='item-card';
-      const img=document.createElement('img'); img.className='thumb';
-      img.src=r.fotoUrl; img.onerror=()=>{ img.src='https://via.placeholder.com/120x90?text=Sem+Foto'; };
+      const img=document.createElement('img'); img.className='thumb'; img.src=r.fotoUrl||''; img.alt=r.item||'Foto';
       const body=document.createElement('div'); body.className='item-body';
       body.innerHTML = `
         <div class="item-title">${r.item||''}</div>
         <div class="item-sub">${r.classificacao||r.empresa||'SEM CLASSIFICAÇÃO'}</div>
-        <div class="item-actions"><button class="btn primary">Abrir</button></div>
+        <div class="item-actions">
+          <button class="btn primary">Abrir</button>
+        </div>
       `;
       body.querySelector('.btn').onclick = ()=> goItem(slug, r.id);
       card.appendChild(img); card.appendChild(body);
@@ -249,7 +255,7 @@ function viewItem(slug,id){
   const detail=document.createElement('div'); detail.className='detail';
   const hero=document.createElement('div'); hero.className='hero';
   hero.innerHTML = `
-    <img src="${r.fotoUrl}" alt="${r.item||'Foto'}" onerror="this.src='https://via.placeholder.com/600x400?text=Sem+Foto'"/>
+    <img src="${r.fotoUrl||''}" alt="${r.item||'Foto'}"/>
     <h2>${r.item||''}</h2>
     <div class="meta">
       <span class="pill">Classificação: <strong>${r.classificacao||r.empresa||'SEM CLASSIFICAÇÃO'}</strong></span>
@@ -294,4 +300,33 @@ function viewItem(slug,id){
           <span class="pill">${fmtQty(qtd)} ${(i.um||'').toUpperCase()}</span>
           <strong>${i.item||i.nome||''}</strong>
         </div>
-        ${i.codigo
+        ${i.codigo?`<span class="muted">(${i.codigo})</span>`:''}
+      `;
+      ul.appendChild(li);
+    });
+    if(rendTotal){
+      const total = (Number(r.rendimento||0) * m) || 0;
+      rendTotal.textContent = total ? `Rendimento total: ${fmtQty(total)} ${(r.unidadeRend||'').toUpperCase()}` : '—';
+    }
+  }
+  multInp.addEventListener('input', renderIng);
+  renderIng();
+}
+
+/* ===== APP ===== */
+function route(){
+  const r=parseHash();
+  if(r.page==='home') viewHome();
+  if(r.page==='setor') viewSetor(r.setor);
+  if(r.page==='item') viewItem(r.setor,r.id);
+}
+window.addEventListener('hashchange', route);
+
+(async function start(){
+  app.innerHTML = '<div class="muted">Carregando…</div>';
+  await fetchReceitas();
+  route();
+})();
+</script>
+</body>
+</html>
