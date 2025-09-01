@@ -117,7 +117,7 @@ function mapRow(raw){
     rendimento: obj.qtdrendimento || obj.rendimento || raw.rendimento || '',
     unidadeRend: obj.umdorendimento || obj.unidaderend || raw.unidadeRend || '',
     receita: parseReceita(obj.receitajson || obj.receita || raw.receita),
-    fotoUrl: normalizeFoto(obj.fotourl || raw.fotoUrl || raw.foto || ''),
+    fotoUrl: normalizeFoto(obj.fotourl || raw.fotoUrl || raw.foto || '') || 'https://via.placeholder.com/300x200?text=Sem+Foto',
     custoReceita: Number(String(obj.custodareceita||'').toString().replace(',','.'))||0,
     custoPorGMl: Number(String(obj.custoporgramaml||'').toString().replace(',','.'))||0,
     custoPorKgL: Number(String(obj.custoporkgl||'').toString().replace(',','.'))||0,
@@ -132,8 +132,9 @@ async function fetchReceitas(){
   try{
     const r = await fetch(WEBAPP_URL+'?action=receitas&ts='+Date.now(),{cache:'no-store'});
     const j = await r.json();
-    const rows = Array.isArray(j) ? j : (j && j.ok ? (j.data||[]) : []);
-    RECEITAS = rows.map(mapRow);
+    const rows = (j && j.ok && Array.isArray(j.data)) ? j.data : [];
+RECEITAS = rows.map(mapRow);
+
     INDEX_BY_ID.clear(); RECEITAS.forEach(r=> INDEX_BY_ID.set(r.id,r));
     badgeTotal.textContent = `Receitas: ${RECEITAS.length}`;
   }catch(e){
