@@ -1,99 +1,383 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Painel • Visualização de Receitas</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Painel • Setores e Receitas</title>
 <style>
   :root{
     --bg:#0f0f10; --panel:#141414; --line:#2a2a2a;
-    --text:#f0f0f0; --muted:#cfcfcf; --brand:#2563eb;
+    --text:#f7f7f7; --muted:#cfcfcf; --brand:#2563eb; --ghost:#374151;
+    --ok:#16a34a; --warn:#f59e0b;
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);padding:16px}
-  h1{margin-bottom:16px;font-size:1.4rem}
-  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
-  select,input{padding:10px;border-radius:10px;border:1px solid var(--line);background:#0f0f10;color:#fff}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column}
-  .card img{width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px}
-  .card h2{font-size:1.1rem;margin-bottom:6px}
-  .card .classif{font-size:.85rem;color:var(--muted);margin-bottom:8px}
-  .ingredientes{margin-top:8px}
-  .ingredientes li{font-size:.9rem;margin-bottom:4px}
-  .qtd-multi{margin-top:10px;display:flex;align-items:center;gap:8px}
-  .qtd-multi input{width:80px;text-align:center}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+  header{position:sticky;top:0;z-index:5;background:linear-gradient(#0f0f10,#0f0f10cc);backdrop-filter:saturate(120%) blur(6px);border-bottom:1px solid var(--line)}
+  .top{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;max-width:1100px;margin:0 auto}
+  .top h1{font-size:1.2rem;margin:0}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{border:1px solid var(--ghost);background:#121212;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer}
+  .btn.primary{background:var(--brand);border-color:var(--brand)}
+  .btn.ghost{background:transparent}
+  .container{max-width:1100px;margin:16px auto;padding:0 16px 24px}
+
+  .grid{display:grid;gap:14px}
+  @media (min-width: 840px){ .grid{grid-template-columns:repeat(3,1fr)} }
+  @media (min-width: 1200px){ .grid{grid-template-columns:repeat(4,1fr)} }
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .card.clickable{cursor:pointer;transition:transform .06s ease}
+  .card.clickable:hover{transform:translateY(-2px)}
+  .card img{width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px;background:#0d0d0e;border:1px solid var(--line)}
+  .title{font-size:1.05rem;font-weight:700;margin-bottom:6px}
+  .muted{color:var(--muted)}
+  .caps{letter-spacing:.04em;text-transform:uppercase;font-size:.78rem;color:#a7a7a7}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid var(--ghost);background:#111;font-size:.8rem}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:6px}
+  input,select{background:#0f0f10;border:1px solid var(--line);color:#fff;border-radius:10px;padding:10px}
+
+  .list{display:grid;gap:12px}
+  @media (min-width: 768px){ .list{grid-template-columns:repeat(2,1fr)} }
+  .item-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:flex-start}
+  .thumb{flex:0 0 120px;height:90px;border-radius:10px;object-fit:cover;border:1px solid var(--line);background:#0d0d0e}
+  .item-body{flex:1}
+  .item-title{font-weight:700;margin-bottom:4px}
+  .item-sub{font-size:.85rem;color:var(--muted)}
+  .item-actions{display:flex;gap:8px;margin-top:8px}
+
+  .detail{display:grid;gap:14px}
+  @media (min-width: 900px){ .detail{grid-template-columns: 1.1fr 1fr} }
+  .hero{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .hero img{width:100%;max-height:360px;object-fit:cover;border-radius:12px;border:1px solid var(--line);background:#0d0d0e}
+  .hero h2{margin:10px 0 6px}
+  .hero .meta{display:flex;gap:8px;flex-wrap:wrap}
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .ing-list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+  .ing-list li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed #1e1e1f;padding-bottom:6px}
+  .ing-left{display:flex;gap:8px;align-items:center}
+  .qty{font-variant-numeric:tabular-nums}
+  .share{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111;border:1px solid #333;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;box-shadow:0 6px 24px rgba(0,0,0,.4);opacity:0;transition:opacity .2s}
 </style>
 </head>
 <body>
-  <h1>Visualização de Receitas</h1>
-
-  <div class="filters">
-    <select id="filtroClassificacao">
-      <option value="">— todas classificações —</option>
-    </select>
-    <input id="busca" placeholder="Buscar receita...">
+<header>
+  <div class="top">
+    <h1 id="headerTitle">Setores</h1>
+    <div class="actions" id="headerActions"></div>
   </div>
+</header>
 
-  <div class="grid" id="gridReceitas"></div>
+<div class="container" id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
+/* =======================
+   CONFIG
+======================= */
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwvWmsR9Sng_2UHJXKZnjn0Z6oUbqMa0FE2XmvhA_IZjIs1D3ocmm0WcgdI_MPgyJ3z/exec';
-let RECEITAS = [];
 
+/* 
+  Mapeamento de setores → classificações.
+  Ex.: setor 'bar' mostra tudo que for DRINKS, CACHAÇAS, COQUETÉIS, etc.
+  Pode editar/expandir à vontade.
+*/
+const SETORES = {
+  bar: ['DRINKS','CACHAÇAS','COQUETÉIS','BEBIDAS','SUCOS','CAIPIRINHAS'],
+  confeitaria: ['CONFEITARIA','DOCES','BOLOS'],
+  padaria: ['PADARIA','PÃES','SALGADOS'],
+  cozinha: ['COZINHA','PRATOS','ALMOÇO','JANTAR'],
+};
+
+const NOME_SETOR = {
+  bar: 'Bar',
+  confeitaria: 'Confeitaria',
+  padaria: 'Padaria',
+  cozinha: 'Cozinha',
+};
+
+/* =======================
+   ESTADO
+======================= */
+let RECEITAS = []; // vindo do GAS
+let INDEX_BY_ID = new Map();
+
+/* =======================
+   HELPERS
+======================= */
+const $ = sel => document.querySelector(sel);
+const app = $('#app');
+const headerTitle = $('#headerTitle');
+const headerActions = $('#headerActions');
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(t._t); t._t = setTimeout(()=> t.style.opacity='0', 1800);
+}
+function slugify(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+}
+function fmtQty(n){
+  const v = Number(n||0);
+  if (v === Math.trunc(v)) return v.toString();
+  return v.toLocaleString('pt-BR',{minimumFractionDigits:0, maximumFractionDigits:4});
+}
+function getClassifOrFallback(r){
+  return (r.classificacao && r.classificacao.trim()) || r.empresa || 'SEM CLASSIFICAÇÃO';
+}
+function buildId(r){
+  // id estável: slug(classif)-slug(item)
+  return slugify(getClassifOrFallback(r)) + '__' + slugify(r.item||'');
+}
+
+/* =======================
+   DATA
+======================= */
 async function fetchReceitas(){
-  const r = await fetch(WEBAPP_URL + '?action=receitas&ts='+Date.now());
-  const j = await r.json();
-  if(j.ok){ RECEITAS = j.data||[]; renderClassificacoes(); renderReceitas(); }
+  const res = await fetch(WEBAPP_URL + '?action=receitas&ts=' + Date.now(), { cache: 'no-store' });
+  const j = await res.json();
+  if(!j.ok){ app.textContent='Erro ao carregar receitas.'; return; }
+  RECEITAS = (j.data||[]).map(r=>({
+    ...r,
+    classificacao: r.classificacao || '',
+    empresa: r.empresa || '',
+    id: buildId(r),
+  }));
+  INDEX_BY_ID.clear();
+  RECEITAS.forEach(r=> INDEX_BY_ID.set(r.id, r));
 }
-function renderClassificacoes(){
-  const sel=document.getElementById('filtroClassificacao');
-  const classes=[...new Set(RECEITAS.map(r=>r.classificacao||''))].filter(Boolean).sort();
-  classes.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+
+/* =======================
+   ROUTER (hash)
+   #/ → home (setores)
+   #/setor/<slug> → lista de itens do setor
+   #/setor/<slug>/item/<id> → detalhe do item
+======================= */
+function parseHash(){
+  const h = location.hash.replace(/^#\//,'').split('/').filter(Boolean);
+  if(h.length===0) return { page:'home' };
+  if(h[0]==='setor' && h.length===2) return { page:'setor', setor:h[1] };
+  if(h[0]==='setor' && h[2]==='item' && h.length===4) return { page:'item', setor:h[1], id:h[3] };
+  return { page:'home' };
 }
-function renderReceitas(){
-  const grid=document.getElementById('gridReceitas');
-  const filtro= document.getElementById('filtroClassificacao').value;
-  const busca= (document.getElementById('busca').value||'').toLowerCase();
-  grid.innerHTML='';
-  RECEITAS.filter(r=>{
-    if(filtro && r.classificacao!==filtro) return false;
-    if(busca && !(r.item||'').toLowerCase().includes(busca)) return false;
-    return true;
-  }).forEach(r=>{
-    const card=document.createElement('div'); card.className='card';
-    if(r.fotoUrl){ const img=document.createElement('img'); img.src=r.fotoUrl; card.appendChild(img); }
-    const h2=document.createElement('h2'); h2.textContent=r.item||''; card.appendChild(h2);
-    const c=document.createElement('div'); c.className='classif'; c.textContent=r.classificacao||''; card.appendChild(c);
-    
-    // multiplicador
-    const multWrap=document.createElement('div'); multWrap.className='qtd-multi';
-    const lbl=document.createElement('label'); lbl.textContent='Qtd receitas:'; multWrap.appendChild(lbl);
-    const inp=document.createElement('input'); inp.type='number'; inp.value=1; inp.min=1; multWrap.appendChild(inp);
-    card.appendChild(multWrap);
 
-    // ingredientes
-    const ul=document.createElement('ul'); ul.className='ingredientes';
-    const renderIng=()=>{
-      ul.innerHTML='';
-      (r.receita||[]).forEach(i=>{
-        const qtd= (i.qtd||0)*inp.value;
-        const li=document.createElement('li');
-        li.textContent=`${qtd} ${i.um} — ${i.item}`;
-        ul.appendChild(li);
-      });
-    };
-    inp.addEventListener('input', renderIng);
-    renderIng();
-    card.appendChild(ul);
+function goHome(){ location.hash = '#/'; }
+function goSetor(slug){ location.hash = '#/setor/' + slug; }
+function goItem(slug, id){ location.hash = `#/setor/${slug}/item/${id}`; }
 
+/* =======================
+   UI: TELA 1 (SETOR CARDS)
+======================= */
+function viewHome(){
+  headerTitle.textContent = 'Setores';
+  headerActions.innerHTML = '';
+
+  // construir cards dos setores (com contagem)
+  const setores = Object.keys(SETORES);
+
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+
+  setores.forEach(slug=>{
+    const classifs = SETORES[slug];
+    const total = RECEITAS.filter(r=>{
+      const c = (r.classificacao||'').trim().toUpperCase();
+      const base = (c || r.empresa || 'SEM CLASSIFICAÇÃO').toUpperCase();
+      return classifs.includes(base);
+    }).length;
+
+    const card = document.createElement('div');
+    card.className = 'card clickable';
+    card.addEventListener('click', ()=> goSetor(slug));
+
+    // título + info
+    card.innerHTML = `
+      <div class="title">${NOME_SETOR[slug] || slug}</div>
+      <div class="muted caps">Inclui: ${classifs.join(', ')}</div>
+      <div style="height:10px"></div>
+      <div class="pill"><span>Itens</span><strong>${total}</strong></div>
+    `;
     grid.appendChild(card);
   });
-}
-document.getElementById('filtroClassificacao').addEventListener('change', renderReceitas);
-document.getElementById('busca').addEventListener('input', renderReceitas);
 
-fetchReceitas();
+  app.innerHTML = '';
+  app.appendChild(grid);
+}
+
+/* =======================
+   UI: TELA 2 (LISTA DO SETOR)
+======================= */
+function receitasDoSetor(slug){
+  const classifs = (SETORES[slug]||[]).map(s=>s.toUpperCase());
+  return RECEITAS.filter(r=>{
+    const c = (r.classificacao||'').trim().toUpperCase();
+    const base = (c || r.empresa || 'SEM CLASSIFICAÇÃO').toUpperCase();
+    return classifs.includes(base);
+  });
+}
+
+function viewSetor(slug){
+  headerTitle.textContent = NOME_SETOR[slug] || slug;
+  headerActions.innerHTML = `
+    <button class="btn ghost" id="btnVoltar">◀ Voltar</button>
+    <button class="btn" id="btnCopiarLink">🔗 Copiar link</button>
+  `;
+  $('#btnVoltar').onclick = goHome;
+  $('#btnCopiarLink').onclick = ()=>{ navigator.clipboard.writeText(location.href); toast('Link copiado!'); };
+
+  const list = receitasDoSetor(slug);
+
+  // filtros rápidos
+  const tool = document.createElement('div');
+  tool.className = 'row';
+  tool.style.marginBottom = '12px';
+  tool.innerHTML = `
+    <div class="field" style="min-width:220px">
+      <label class="caps">Buscar</label>
+      <input id="inpBusca" placeholder="Nome do produto...">
+    </div>
+  `;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'list';
+  function render(){
+    const q = ($('#inpBusca').value||'').toLowerCase();
+    wrap.innerHTML = '';
+    list.filter(r => !q || (r.item||'').toLowerCase().includes(q))
+        .forEach(r=>{
+          const card = document.createElement('div');
+          card.className = 'item-card';
+
+          const img = document.createElement('img');
+          img.className = 'thumb';
+          img.src = r.fotoUrl || '';
+          img.alt = r.item || 'Foto do produto';
+
+          const body = document.createElement('div'); body.className = 'item-body';
+          const ttl = document.createElement('div'); ttl.className='item-title'; ttl.textContent = r.item||'';
+          const sub = document.createElement('div'); sub.className='item-sub';
+          sub.textContent = (r.classificacao||r.empresa||'SEM CLASSIFICAÇÃO');
+
+          const actions = document.createElement('div'); actions.className='item-actions';
+          const btn = document.createElement('button'); btn.className='btn primary'; btn.textContent = 'Abrir';
+          btn.onclick = ()=> goItem(slug, r.id);
+
+          actions.appendChild(btn);
+          body.appendChild(ttl); body.appendChild(sub); body.appendChild(actions);
+
+          card.appendChild(img); card.appendChild(body);
+          wrap.appendChild(card);
+        });
+  }
+  tool.querySelector('#inpBusca').addEventListener('input', render);
+  render();
+
+  app.innerHTML = '';
+  app.appendChild(tool);
+  app.appendChild(wrap);
+}
+
+/* =======================
+   UI: TELA 3 (DETALHE DO ITEM)
+======================= */
+function viewItem(slug, id){
+  const r = INDEX_BY_ID.get(id);
+  if(!r){ app.textContent='Receita não encontrada.'; return; }
+
+  headerTitle.textContent = r.item || 'Receita';
+  headerActions.innerHTML = `
+    <button class="btn ghost" id="btnVoltarSetor">◀ ${NOME_SETOR[slug]||slug}</button>
+    <button class="btn" id="btnCopiarLink">🔗 Copiar link</button>
+  `;
+  $('#btnVoltarSetor').onclick = ()=> goSetor(slug);
+  $('#btnCopiarLink').onclick = ()=>{ navigator.clipboard.writeText(location.href); toast('Link copiado!'); };
+
+  const detail = document.createElement('div'); detail.className='detail';
+
+  // HERÓI
+  const hero = document.createElement('div'); hero.className='hero';
+  const img = document.createElement('img'); img.src = r.fotoUrl || ''; img.alt = r.item || 'Foto';
+  const h2 = document.createElement('h2'); h2.textContent = r.item||'';
+  const meta = document.createElement('div'); meta.className='meta';
+  meta.innerHTML = `
+    <span class="pill">Classificação: <strong>${(r.classificacao||r.empresa||'SEM CLASSIFICAÇÃO')}</strong></span>
+    ${r.rendimento ? `<span class="pill">Rendimento: <strong>${r.rendimento} ${(r.unidadeRend||'').toUpperCase()}</strong></span>` : ''}
+  `;
+  hero.appendChild(img); hero.appendChild(h2); hero.appendChild(meta);
+
+  // LADO DIREITO
+  const right = document.createElement('div'); right.className='box';
+  right.innerHTML = `
+    <div class="row">
+      <div class="field">
+        <label class="caps">Quantas receitas</label>
+        <input id="mult" type="number" min="1" step="1" value="1">
+      </div>
+      ${r.rendimento ? `
+      <div class="field">
+        <label class="caps">Rendimento total</label>
+        <div class="pill" id="rendTotal">—</div>
+      </div>`:''}
+    </div>
+    <div style="height:10px"></div>
+    <div class="caps" style="margin-bottom:6px">Ingredientes</div>
+    <ul class="ing-list" id="ingList"></ul>
+  `;
+
+  detail.appendChild(hero);
+  detail.appendChild(right);
+
+  app.innerHTML = '';
+  app.appendChild(detail);
+
+  // render ingredientes multiplicados
+  const ul = right.querySelector('#ingList');
+  const multInp = right.querySelector('#mult');
+  const rendTotal = right.querySelector('#rendTotal');
+
+  function renderIng(){
+    const m = Math.max(1, parseInt(multInp.value||'1',10));
+    ul.innerHTML = '';
+    (r.receita||[]).forEach(i=>{
+      const li = document.createElement('li');
+      const qtd = (Number(i.qtd||0) * m);
+      li.innerHTML = `
+        <div class="ing-left">
+          <span class="pill qty">${fmtQty(qtd)} ${(i.um||'').toUpperCase()}</span>
+          <strong>${i.item||''}</strong>
+        </div>
+        ${i.codigo ? `<span class="muted">(${i.codigo})</span>`:''}
+      `;
+      ul.appendChild(li);
+    });
+    if(rendTotal){
+      const umR = (r.unidadeRend||'').toUpperCase();
+      const qtdR = Number(r.rendimento||0) * m;
+      rendTotal.textContent = (qtdR ? `${fmtQty(qtdR)} ${umR}` : '—');
+    }
+  }
+  multInp.addEventListener('input', renderIng);
+  renderIng();
+}
+
+/* =======================
+   APP
+======================= */
+async function start(){
+  app.innerHTML = '<div class="muted">Carregando…</div>';
+  await fetchReceitas();
+  route();
+}
+function route(){
+  const r = parseHash();
+  if(r.page==='home') viewHome();
+  if(r.page==='setor') viewSetor(r.setor);
+  if(r.page==='item') viewItem(r.setor, r.id);
+}
+window.addEventListener('hashchange', route);
+start();
 </script>
 </body>
 </html>
