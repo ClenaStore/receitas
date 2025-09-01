@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel • Visualização de Receitas</title>
+<style>
+  :root{
+    --bg:#0f0f10; --panel:#141414; --line:#2a2a2a;
+    --text:#f0f0f0; --muted:#cfcfcf; --brand:#2563eb;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);padding:16px}
+  h1{margin-bottom:16px;font-size:1.4rem}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  select,input{padding:10px;border-radius:10px;border:1px solid var(--line);background:#0f0f10;color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column}
+  .card img{width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px}
+  .card h2{font-size:1.1rem;margin-bottom:6px}
+  .card .classif{font-size:.85rem;color:var(--muted);margin-bottom:8px}
+  .ingredientes{margin-top:8px}
+  .ingredientes li{font-size:.9rem;margin-bottom:4px}
+  .qtd-multi{margin-top:10px;display:flex;align-items:center;gap:8px}
+  .qtd-multi input{width:80px;text-align:center}
+</style>
+</head>
+<body>
+  <h1>Visualização de Receitas</h1>
+
+  <div class="filters">
+    <select id="filtroClassificacao">
+      <option value="">— todas classificações —</option>
+    </select>
+    <input id="busca" placeholder="Buscar receita...">
+  </div>
+
+  <div class="grid" id="gridReceitas"></div>
+
+<script>
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwvWmsR9Sng_2UHJXKZnjn0Z6oUbqMa0FE2XmvhA_IZjIs1D3ocmm0WcgdI_MPgyJ3z/exec';
+let RECEITAS = [];
+
+async function fetchReceitas(){
+  const r = await fetch(WEBAPP_URL + '?action=receitas&ts='+Date.now());
+  const j = await r.json();
+  if(j.ok){ RECEITAS = j.data||[]; renderClassificacoes(); renderReceitas(); }
+}
+function renderClassificacoes(){
+  const sel=document.getElementById('filtroClassificacao');
+  const classes=[...new Set(RECEITAS.map(r=>r.classificacao||''))].filter(Boolean).sort();
+  classes.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+}
+function renderReceitas(){
+  const grid=document.getElementById('gridReceitas');
+  const filtro= document.getElementById('filtroClassificacao').value;
+  const busca= (document.getElementById('busca').value||'').toLowerCase();
+  grid.innerHTML='';
+  RECEITAS.filter(r=>{
+    if(filtro && r.classificacao!==filtro) return false;
+    if(busca && !(r.item||'').toLowerCase().includes(busca)) return false;
+    return true;
+  }).forEach(r=>{
+    const card=document.createElement('div'); card.className='card';
+    if(r.fotoUrl){ const img=document.createElement('img'); img.src=r.fotoUrl; card.appendChild(img); }
+    const h2=document.createElement('h2'); h2.textContent=r.item||''; card.appendChild(h2);
+    const c=document.createElement('div'); c.className='classif'; c.textContent=r.classificacao||''; card.appendChild(c);
+    
+    // multiplicador
+    const multWrap=document.createElement('div'); multWrap.className='qtd-multi';
+    const lbl=document.createElement('label'); lbl.textContent='Qtd receitas:'; multWrap.appendChild(lbl);
+    const inp=document.createElement('input'); inp.type='number'; inp.value=1; inp.min=1; multWrap.appendChild(inp);
+    card.appendChild(multWrap);
+
+    // ingredientes
+    const ul=document.createElement('ul'); ul.className='ingredientes';
+    const renderIng=()=>{
+      ul.innerHTML='';
+      (r.receita||[]).forEach(i=>{
+        const qtd= (i.qtd||0)*inp.value;
+        const li=document.createElement('li');
+        li.textContent=`${qtd} ${i.um} — ${i.item}`;
+        ul.appendChild(li);
+      });
+    };
+    inp.addEventListener('input', renderIng);
+    renderIng();
+    card.appendChild(ul);
+
+    grid.appendChild(card);
+  });
+}
+document.getElementById('filtroClassificacao').addEventListener('change', renderReceitas);
+document.getElementById('busca').addEventListener('input', renderReceitas);
+
+fetchReceitas();
+</script>
+</body>
+</html>
